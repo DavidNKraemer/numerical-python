@@ -17,13 +17,14 @@ class FPIterator(NumericalIterator):
 
     def __call__(self, func, guess, tolerance=TOLERANCE, max_iter=MAX_ITER):
         guess = np.asarray(guess)
+        updator = self.updator(func)
         fixed_points = np.empty((max_iter + 1, *guess.shape))
         fixed_points[0] = guess
         iterations = 1
 
         while iterations < max_iter:
-            fixed_points[iterations] = self.updator(func, fixed_points[iterations - 1])
-            if self.evaluator(fixed_points[iterations], fixed_points[iterations-1], tolerance):
+            fixed_points[iterations] = updator(fixed_points[iterations - 1])
+            if self.evaluator(fixed_points, iterations, tolerance):
                 break
             iterations += 1
 
@@ -36,26 +37,27 @@ class FPIterator(NumericalIterator):
         return self.__repr__()
 
     def __repr__(self):
-        return "FPIterator."
+        return "FPIterator"
 
 def _fp_update(func):
     """
-    x[i] = f(x[i-1])
+    x[i] -> f(x[i-1])
     """
     return lambda x: func(x)
 
-def _fp_evaluate(newer, older, tolerance):
+def _fp_evaluate(sequence, iteration, tolerance):
     """
     |x[i] - x[i-1]| < tol
     """
-    return np.abs(newer - older) < tolerance
+    return np.abs(sequence[iteration] - sequence[iteration - 1]) < tolerance
+
 
 fixed_point = FPIterator(_fp_update, _fp_evaluate)
 
-def _newton_update(func, fderiv):
+def _newton_update(func):
     """
-    x[i] = x - f(x[i-1]) / f'(x[i-1])
+    x[i] -> x - f(x[i-1]) / f'(x[i-1])
     """
-    return lambda x: x - func(x) / fderiv(x)
+    return lambda x: x - func[0](x) / func[1](x)
 
 newton = FPIterator(_newton_update, _fp_evaluate)
